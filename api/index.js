@@ -5,8 +5,13 @@ let isConnected = false;
 
 export default async function handler(req, res) {
   if (!isConnected) {
-    await DbConnect();
-    isConnected = true;
+    try {
+      await DbConnect();
+      isConnected = true;
+    } catch (err) {
+      console.error("❌ DB connection failed:", err.message);
+      return res.status(500).json({ message: "Database connection failed: " + err.message });
+    }
   }
   return app(req, res);
 }
