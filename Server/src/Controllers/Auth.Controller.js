@@ -1,8 +1,9 @@
 import User from "../Models/Auth.Model.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import ApiResponse from "../Utils/ApiResponse.js";
 
 /* ===================== SIGNIN ===================== */
 export const Signin = async (req, res) => {
@@ -24,13 +25,19 @@ export const Signin = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "7d" }
     );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.status(200).json({
       success: true,
-      token,
-      user: { id: user._id, email: user.email, role: user.role },
+      user: { id: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
       message: "Signin successful"
     });
 
@@ -75,7 +82,7 @@ export const SignUp = async (req, res) => {
 /* ===================== SIGNOUT ===================== */
 export const SignOut = async (req, res) => {
   try {
-    res.clearCookie("token");
+    res.clearCookie("token", { httpOnly: true, secure: true, sameSite: "none" });
     return res.status(200).json({
       success: true,
       message: "Signout successful"
@@ -198,13 +205,15 @@ export const ResetPassword = async (req, res) => {
 
 export const CheckAuth = async (req, res) => {
   try {
-    const user = req.user;
-    res.status(200).json(
-      new ApiResponse(201, user, "Authorized user")
-    )
+    const user = await User.findById(req.userId).select("-password");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    res.status(200).json({
+      success: true,
+      user: { id: user._id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName },
+    });
   } catch (error) {
-    res.status(400).json(
-      new ApiResponse(401, error, "Error in user authentication")
-    )
+    res.status(401).json({ success: false, message: "Unauthorized" });
   }
-}
+};

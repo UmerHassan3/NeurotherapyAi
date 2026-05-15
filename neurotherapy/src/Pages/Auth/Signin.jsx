@@ -22,14 +22,15 @@ export default function Signin() {
     const dispatch = useDispatch();
     const OnSubmit = async (e) => {
         e.preventDefault();
-        dispatch(SignInUser(formData)).unwrap()
-        toast.success("Sign In successfull");
-        
-        console.log(User)
+        try {
+            const result = await dispatch(SignInUser(formData)).unwrap();
+            const role = result?.user?.role;
+            toast.success("Sign In successful");
+            navigate(role === "admin" ? "/admin/dashboard" : "/");
+        } catch (err) {
+            toast.error(err?.message || "Sign In failed");
+        }
     };
-    useEffect(() => {
-        console.log("User updated:", User);
-    }, [User]);
 
 
 

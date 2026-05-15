@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import authRoutes from "./Routes/Auth.Routes/Auth.Routes.js";
 import userRoutes from "./Routes/User.Routes/User.Routes.js";
 import adminRoutes from "./Routes/AdminRoutes/Admin.Route.js"
@@ -26,6 +27,9 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// COOKIE PARSER
+app.use(cookieParser());
 
 // BODY PARSER
 app.use(express.json());
