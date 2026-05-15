@@ -16,7 +16,7 @@ const initialState = {
 
 export default function Signup() {
   const [formData, setFormData] = useState(initialState);
-  const { User, isAuthenticated, loading } = useSelector((state) => state.auth);
+  const { isLoading } = useSelector((state) => state.auth);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -63,9 +63,9 @@ export default function Signup() {
           formControls={SignupInputs}
           FormData={formData}
           setFormData={setFormData}
-          buttonText={loading ? "Creating Account..." : "Sign Up"}
+          buttonText={isLoading ? "Creating Account..." : "Sign Up"}
           onSubmit={OnSubmit}
-          isDisabled={loading}
+          isDisabled={isLoading}
         />
 
         {/* Divider */}

@@ -17,7 +17,7 @@ export default function Signin() {
     const [formData, setFormData] = useState(
         initialState);
 
-    const { User, isAuthenticated, error, loading } = useSelector((state) => state.auth);
+    const { isAuthenticated, error, isLoading } = useSelector((state) => state.auth);
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const OnSubmit = async (e) => {
@@ -59,9 +59,9 @@ export default function Signin() {
                         formControls={SigninInputs}
                         FormData={formData}
                         setFormData={setFormData}
-                        buttonText={loading ? "Signing In..." : "Sign In"}
+                        buttonText={isLoading ? "Signing In..." : "Sign In"}
                         onSubmit={OnSubmit}
-                        isDisabled={loading}
+                        isDisabled={isLoading}
                     />
 
                     <p className="text-center text-sm text-black-300 mt-5">
