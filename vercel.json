@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "neurotherapy",
+      "use": "@vercel/static-build"
+    },
+    {
+      "src": "Server/src/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/.*",
+      "dest": "Server/src/index.js"
+    }
+  ]
+  
+}
