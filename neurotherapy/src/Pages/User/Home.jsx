@@ -33,7 +33,7 @@ const Home = () => {
                 </div>
 
                 {/* LEFT SIDE TEXT */}
-                <div className="w-full md:w-1/2 flex flex-col justify-center mt-8 mb-8 md:mt-0 order-2 md:order-1">
+                <div className="w-full md:w-1/2 flex flex-col justify-center mt-2 mb-8 md:mt-0 order-2 md:order-1">
 
                     {/* HEADING */}
                     <div className="leading-tight mb-4">

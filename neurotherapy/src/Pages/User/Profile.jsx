@@ -1,71 +1,87 @@
-import Commonform from '@/Common/CommonForm';
-import { ProfileUpdateInputs } from '../../Options/index';
-import React, { useEffect, useState } from 'react';
-
-import { cos } from 'three/src/nodes/math/MathNode.js';
-
-const initialState = {
-    firstName: "",
-    lastName: "",
-    email: ""
-};
+import React from "react";
+import { useSelector } from "react-redux";
 
 const Profile = () => {
-    const { User } = useAuthStore();
-    const { loading, updateUser } = useUserStore();
-    const [formData, setFormData] = useState(initialState);
+  const { User, isAuthenticated, isLoading } = useSelector(
+    (state) => state.auth
+  );
 
-    const OnSubmit = async (e) => {
-        e.preventDefault();
-
-        if (userid) {
-            console.log("User not ready");
-            return;
-        }
-        await updateUser(formData, userid);
-    };
-
-    // ✅ Fetch user only ONCE
-    useEffect(() => {
-        if (User) {
-            console.log("User loaded in Profile.jsx:", User);
-        }
-        const userid = User?._id;
-    }, []);
-
-
-
+  if (isLoading) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black text-white px-4">
-
-            <div className="w-full max-w-3xl bg-zinc-900 border border-red-600/40 rounded-2xl shadow-2xl p-8">
-
-                {/* Header */}
-                <h1 className="text-3xl font-bold text-red-500 text-center mb-6">
-                    Profile Settings
-                </h1>
-
-                {/* User Info */}
-                <div className="bg-black/60 border border-red-500/30 rounded-xl p-5 mb-8">
-                    <p><span className="text-red-500">First Name:</span> {User?.firstName}</p>
-                    <p><span className="text-red-500">Last Name:</span> {User?.lastName}</p>
-                    <p><span className="text-red-500">Email:</span> {User?.email}</p>
-                </div>
-
-                {/* Form */}
-                <div className="bg-zinc-950 border border-red-500/30 rounded-xl p-6">
-                    <Commonform
-                        formControls={ProfileUpdateInputs}
-                        FormData={formData}
-                        setFormData={setFormData}
-                        buttonText={loading ? "Updating..." : "Update Profile"}
-                        onSubmit={OnSubmit}
-                    />
-                </div>
-
-            </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <p className="text-slate-400 animate-pulse">Loading profile...</p>
+      </div>
     );
+  }
+
+  if (!isAuthenticated || !User) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <p className="text-red-400">User not found / not logged in</p>
+      </div>
+    );
+  }
+
+  const initials =
+    `${User?.firstName?.[0] || ""}${User?.lastName?.[0] || ""}`.toUpperCase();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+
+      {/* Card */}
+      <div className="w-full max-w-lg bg-slate-900/60 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl p-8">
+
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+
+          {/* Avatar */}
+          <div className="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow-md">
+            {initials || "U"}
+          </div>
+
+          {/* Name + Email */}
+          <div>
+            <h2 className="text-xl font-semibold text-white">
+              {User?.firstName} {User?.lastName}
+            </h2>
+            <p className="text-sm text-slate-400">{User?.email}</p>
+          </div>
+        </div>
+
+        {/* Info Section */}
+        <div className="space-y-4">
+
+          <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+            <span className="text-slate-400 text-sm">First Name</span>
+            <span className="text-white font-medium">
+              {User?.firstName || "-"}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+            <span className="text-slate-400 text-sm">Last Name</span>
+            <span className="text-white font-medium">
+              {User?.lastName || "-"}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+            <span className="text-slate-400 text-sm">Email</span>
+            <span className="text-white font-medium break-all">
+              {User?.email || "-"}
+            </span>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 text-center text-xs text-slate-500">
+          Secure Profile • NeuroTherapy
+        </div>
+
+      </div>
+    </div>
+  );
 };
 
 export default Profile;
