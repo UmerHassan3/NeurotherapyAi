@@ -1,10 +1,10 @@
 import Commonform from "@/Common/CommonForm";
 import { ContactForm } from "@/Options";
-import { addContact } from "@/store/userSlice/UserSlice";
+import { addContact } from "@/store/userSlice/userSlice";
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/Components/ui/skeleton";
 
 const initialState = {
     name: "",
