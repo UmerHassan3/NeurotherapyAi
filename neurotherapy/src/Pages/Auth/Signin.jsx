@@ -5,6 +5,7 @@ import { SignInUser } from "@/store/authSlice/authSlice";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "sonner";
 
 
 
@@ -21,7 +22,9 @@ export default function Signin() {
     const dispatch = useDispatch();
     const OnSubmit = async (e) => {
         e.preventDefault();
-        dispatch(SignInUser(formData))
+        dispatch(SignInUser(formData)).unwrap()
+        toast.success("Sign In successfull");
+        
         console.log(User)
     };
     useEffect(() => {

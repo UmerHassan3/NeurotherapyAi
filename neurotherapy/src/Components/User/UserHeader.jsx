@@ -34,7 +34,7 @@ export default function UserHeader({ user, onSignout }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // close on ESC
+  // ESC close
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "Escape") {
@@ -56,23 +56,28 @@ export default function UserHeader({ user, onSignout }) {
   };
 
   return (
-    <header className="header">
-      <div className="container">
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between px-5 py-3">
 
         {/* Logo */}
-        <div className="logo" onClick={() => navigate("/")}>
+        <div
+          className="font-bold text-lg cursor-pointer"
+          onClick={() => navigate("/")}
+        >
           NeuroTherapy
         </div>
 
         {/* Desktop Nav */}
-        <nav className="nav">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-8 xl:gap-12">
           {NAV_LINKS.map((item) => (
             <button
               key={item.path}
-              className={`navLink ${
-                location.pathname === item.path ? "active" : ""
-              }`}
               onClick={() => navigate(item.path)}
+              className={`text-sm transition ${
+                location.pathname === item.path
+                  ? "text-blue-600 font-semibold"
+                  : "text-gray-600 hover:text-black"
+              }`}
             >
               {item.label}
             </button>
@@ -80,39 +85,48 @@ export default function UserHeader({ user, onSignout }) {
         </nav>
 
         {/* Right Side */}
-        <div className="right">
+        <div className="flex items-center gap-3">
 
           {/* Avatar Dropdown */}
-          <div className="dropdown" ref={dropdownRef}>
+          <div className="relative" ref={dropdownRef}>
             <button
-              className="avatar"
               onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded-full hover:shadow-sm transition bg-white"
             >
-              <div className="circle">{initials}</div>
-              <span className="name">{user?.name || "User"}</span>
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">
+                {initials}
+              </div>
+              <span className="text-sm text-gray-700 hidden sm:block">
+                {user?.name || "User"}
+              </span>
             </button>
 
+            {/* Dropdown Menu */}
             {dropdownOpen && (
-              <div className="menu">
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                 <button
                   onClick={() => {
                     setDropdownOpen(false);
                     navigate("/settings");
                   }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                 >
                   Settings
                 </button>
 
-                <button className="danger" onClick={handleLogout}>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
+                >
                   Sign out
                 </button>
               </div>
             )}
           </div>
 
-          {/* Mobile Button */}
+          {/* Mobile Menu Button */}
           <button
-            className="hamburger"
+            className="md:hidden text-2xl"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             ☰
@@ -122,7 +136,7 @@ export default function UserHeader({ user, onSignout }) {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="mobileMenu">
+        <div className="md:hidden flex flex-col border-t border-gray-200 px-5 py-3 gap-2">
           {NAV_LINKS.map((item) => (
             <button
               key={item.path}
@@ -130,160 +144,30 @@ export default function UserHeader({ user, onSignout }) {
                 navigate(item.path);
                 setMenuOpen(false);
               }}
+              className="text-left text-gray-700 hover:text-black py-2"
             >
               {item.label}
             </button>
           ))}
 
-          <button onClick={() => navigate("/settings")}>
+          <button
+            onClick={() => {
+              navigate("/settings");
+              setMenuOpen(false);
+            }}
+            className="text-left py-2"
+          >
             Settings
           </button>
 
-          <button className="danger" onClick={handleLogout}>
+          <button
+            onClick={handleLogout}
+            className="text-left py-2 text-red-500"
+          >
             Sign out
           </button>
         </div>
       )}
-
-      {/* Styles */}
-      <style>{`
-        .header {
-          position: sticky;
-          top: 0;
-          background: white;
-          border-bottom: 1px solid #eee;
-          z-index: 1000;
-        }
-
-        .container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 20px;
-        }
-
-        .logo {
-          font-weight: bold;
-          font-size: 18px;
-          cursor: pointer;
-        }
-
-        .nav {
-          display: flex;
-          gap: 16px;
-        }
-
-        .navLink {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-          color: #555;
-        }
-
-        .active {
-          color: #2563eb;
-          font-weight: 600;
-        }
-
-        .right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .dropdown {
-          position: relative;
-        }
-
-        .avatar {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          border: 1px solid #ddd;
-          padding: 5px 10px;
-          border-radius: 999px;
-          background: white;
-          cursor: pointer;
-        }
-
-        .circle {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: #2563eb;
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 12px;
-        }
-
-        .menu {
-          position: absolute;
-          right: 0;
-          top: 45px;
-          background: white;
-          border: 1px solid #eee;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-          border-radius: 10px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .menu button {
-          padding: 10px 14px;
-          border: none;
-          background: white;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .menu button:hover {
-          background: #f5f5f5;
-        }
-
-        .danger {
-          color: red;
-        }
-
-        .hamburger {
-          display: none;
-          font-size: 22px;
-          background: none;
-          border: none;
-          cursor: pointer;
-        }
-
-        .mobileMenu {
-          display: none;
-          flex-direction: column;
-          padding: 10px;
-          border-top: 1px solid #eee;
-        }
-
-        .mobileMenu button {
-          padding: 10px;
-          border: none;
-          background: none;
-          text-align: left;
-        }
-
-        @media (max-width: 768px) {
-          .nav {
-            display: none;
-          }
-
-          .hamburger {
-            display: block;
-          }
-
-          .mobileMenu {
-            display: flex;
-          }
-        }
-      `}</style>
     </header>
   );
 }

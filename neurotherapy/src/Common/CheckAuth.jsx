@@ -1,46 +1,50 @@
 import { Navigate, useLocation } from "react-router-dom";
 
-export default function CheckAuth({ isAuthenticated, User, children }) {
+export default function CheckAuth({ User, isAuthenticated, children }) {
   const location = useLocation();
   const path = location.pathname;
+
+  const role = User?.role;
 
   const isAuthRoute = path.startsWith("/auth");
   const isAdminRoute = path.startsWith("/admin");
 
   // ---------------------------
-  // 1. NOT LOGGED IN
+  // 1. NOT AUTHENTICATED USERS
   // ---------------------------
   if (!isAuthenticated) {
-    if (isAuthRoute) return <>{children}</>;
+    // only "/" and "/auth/*" allowed
+    if (path === "/" || isAuthRoute) {
+      return <>{children}</>;
+    }
 
     return <Navigate to="/auth/signin" replace />;
   }
 
   // ---------------------------
-  // 2. LOGGED IN USER
+  // 2. AUTHENTICATED USERS CANNOT ACCESS AUTH PAGES
   // ---------------------------
-
-  const role = User?.role;
+  if (isAuthRoute) {
+    return <Navigate to="/" replace />;
+  }
 
   // ---------------------------
-  // 3. ADMIN LOGIC
+  // 3. ADMIN RULES
   // ---------------------------
   if (role === "admin") {
-    if (isAdminRoute) return <>{children}</>;
+    // admin only inside /admin/*
+    if (isAdminRoute) {
+      return <>{children}</>;
+    }
 
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  if(role==="admin"){
-    if(!isAdminRoute||!isAuthRoute){
-      return <Navigate to="/admin/dashboard" replace />
-    }
-  }
-
   // ---------------------------
-  // 4. NORMAL USER
+  // 4. USER RULES
   // ---------------------------
   if (role === "user") {
+    // block admin routes
     if (isAdminRoute) {
       return <Navigate to="/" replace />;
     }

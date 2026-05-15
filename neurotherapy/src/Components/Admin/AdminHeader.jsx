@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { SignOutUser } from "@/store/authSlice/authSlice";
 
 function getInitials(name = "", email = "") {
   if (name) {
@@ -38,13 +39,13 @@ export default function AdminHeader({ onMenuToggle, sidebarOpen }) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const dispatch = useDispatch();
   const handleLogout = async () => {
     if (loggingOut) return;
     try {
       setLoggingOut(true);
       setDropdownOpen(false);
-      await Signout();
-      navigate("/auth/signin");
+      dispatch(SignOutUser());
     } catch {
       setLoggingOut(false);
     }

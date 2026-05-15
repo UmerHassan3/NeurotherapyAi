@@ -1,44 +1,52 @@
-import User from '../Models/Auth.Model.js';
+import Contact from "../Models/Contact.Model.js";
+import ApiResponse from "../Utils/ApiResponse.js";
+import { transporter } from "../Utils/mailer.js";
 
-/* ================= FETCH USER ================= */
-export const fetchUser = async (req, res) => {
-    const {userId} = req.query;
-    console.log("USER ID:", req.query.userId);
-    try {
-        const user = await User.findById(userId).select('-password'); // Exclude password
+export const addContact = async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
 
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        res.status(200).json(user);
-
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    // validation
+    if (!name || !email || !message) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "All fields are required"));
     }
-};
 
-/* ================= UPDATE USER ================= */
-export const updateUser = async (req, res) => {
-    try {
-        const { firstName, lastName, email } = req.body;
-        const userId = req.params.userId; // better than params (secure)
+    // save contact
+    const contact = await Contact.create({
+      name,
+      email,
+      message,
+    });
 
-        const user = await User.findById(userId);
+    // send email
+    await transporter.sendMail({
+      from: `"NeuroTherapy" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "We received your message",
+      html: `
+        <div style="font-family:Arial;padding:10px">
+          <h2>Thank you for contacting NeuroTherapy</h2>
+          <p>Hi <b>${name}</b>,</p>
+          <p>We have received your message:</p>
+          <blockquote>${message}</blockquote>
+          <p>Our team will respond soon.</p>
+          <br/>
+          <p>— NeuroTherapy Team</p>
+        </div>
+      `,
+    });
 
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+    return res.status(201).json(
+      new ApiResponse(201, contact, "Message sent successfully")
+    );
 
-        user.firstName = firstName || user.firstName;
-        user.lastName = lastName || user.lastName;
-        user.email = email || user.email;
+  } catch (error) {
+    console.error(error);
 
-        const updatedUser = await user.save();
-
-        res.status(200).json(updatedUser);
-
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    return res.status(500).json(
+      new ApiResponse(500, null, "Cannot send contact message")
+    );
+  }
 };

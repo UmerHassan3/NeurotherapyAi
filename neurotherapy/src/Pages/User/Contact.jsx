@@ -1,78 +1,77 @@
-import { useState } from 'react';
+import Commonform from "@/Common/CommonForm";
+import { ContactForm } from "@/Options";
+import { addContact } from "@/store/userSlice/UserSlice";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function Contact() {
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        message: ''
-    });
+const initialState = {
+    name: "",
+    email: "",
+    message: "",
+};
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+const Contact = () => {
+    const [formData, setformData] = useState(initialState);
+    const dispatch = useDispatch();
 
-    const handleSubmit = (e) => {
+    const loading = useSelector((state) => state.user.loading);
+
+    const OnSubmit = async (e) => {
         e.preventDefault();
-        console.log('Form submitted:', formData);
+
+        try {
+            await dispatch(addContact(formData)).unwrap();
+
+            toast.success("Message sent successfully");
+            setformData(initialState);
+
+        } catch (error) {
+            toast.error(error?.message || "Something went wrong");
+        }
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8">Contact Us</h1>
-            <form onSubmit={handleSubmit} className="max-w-lg mx-auto">
-                <div className="mb-4">
-                    <label className="block mb-2" htmlFor="name">
-                        Name
-                    </label>
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded"
-                        required
-                    />
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 flex items-center justify-center px-4">
+
+            <div className="w-full max-w-3xl bg-white shadow-2xl rounded-2xl border border-gray-100 p-8 md:p-10">
+
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+                        Get in Touch
+                    </h1>
+                    <p className="text-gray-500 mt-2">
+                        Have a question? We’re here to help you anytime.
+                    </p>
                 </div>
-                <div className="mb-4">
-                    <label className="block mb-2" htmlFor="email">
-                        Email
-                    </label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded"
-                        required
+
+                {/* LOADING SKELETON */}
+                {loading ? (
+                    <div className="space-y-4">
+                        <Skeleton className="h-10 w-full rounded-md" />
+                        <Skeleton className="h-10 w-full rounded-md" />
+                        <Skeleton className="h-32 w-full rounded-md" />
+                        <Skeleton className="h-10 w-40 rounded-md" />
+                    </div>
+                ) : (
+                    <Commonform
+                        formControls={ContactForm}
+                        FormData={formData}
+                        setFormData={setformData}
+                        onSubmit={OnSubmit}
+                        buttonText="Send Message"
                     />
+                )}
+
+                {/* Footer */}
+                <div className="text-center mt-6 text-xs text-gray-400">
+                    We usually respond within 24 hours ⚡
                 </div>
-                <div className="mb-4">
-                    <label className="block mb-2" htmlFor="message">
-                        Message
-                    </label>
-                    <textarea
-                        id="message"
-                        name="message"
-                        value={formData.message}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded"
-                        rows="5"
-                        required
-                    />
-                </div>
-                <button
-                    type="submit"
-                    className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
-                >
-                    Send Message
-                </button>
-            </form>
+            </div>
         </div>
     );
-}
+};
+
+export default Contact;

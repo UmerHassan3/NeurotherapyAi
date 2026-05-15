@@ -1,10 +1,9 @@
 import express from 'express';
-import { fetchUser, updateUser } from '../../Controllers/User.Controller.js';
+import { addContact } from '../../Controllers/User.Controller.js';
 
 const router = express.Router();
 
-router.get("/get", fetchUser);
-router.put("/update/:userId", updateUser);
+router.post("/contact/add",addContact)
 
 
 export default router;
