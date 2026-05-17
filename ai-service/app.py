@@ -225,7 +225,7 @@ def _call_claude(message: str, state: str, info: dict, band_powers: dict, histor
         f"  {i+1}. {r['name']} ({r['duration']}) — {r['description']}"
         for i, r in enumerate(info["recommendations"])
     )
-    system = f"""You are Wysa, a warm and empathetic AI mental wellness companion integrated with an EEG brain scanner.
+    system = f"""You are Neuro AI, a warm and empathetic AI mental wellness companion integrated with an EEG brain scanner.
 
 CURRENT USER EEG SCAN:
 - Mental State: {state}
@@ -267,52 +267,101 @@ RULES:
 
 def _detect_intent(msg: str) -> str:
     m = msg.lower()
-    if not m or m in ("start", "hello", "hi", "hey", "hii", "helo"):
+    if not m or m in ("start", "hello", "hi", "hey", "hii", "helo", "good morning", "good evening", "good afternoon"):
         return "greeting"
     if any(w in m for w in ("how am i", "what's my", "my state", "my result", "what does it show", "my eeg", "how do i look", "what did it find")):
         return "state_inquiry"
-    # breathing must come before physical so "breathing exercise" routes correctly
-    if any(w in m for w in ("breath", "breathing", "breathe", "box breath", "4-7-8", "pranayama", "breathing exercise")):
+    # breathing — checked before physical
+    if any(w in m for w in ("breath", "breathing", "breathe", "box breath", "4-7-8", "pranayama", "inhale", "exhale", "diaphragm")):
         return "breathing"
     # physical exercise — checked before generic recommendation
     if any(w in m for w in ("physical exercise", "physical activity", "body exercise", "body workout",
                              "yoga", "stretching", "stretch", "workout", "movement exercise",
-                             "physical", "body movement", "give exercise", "suggest exercise",
-                             "what exercise", "exercise for", "exercise to")):
+                             "body movement", "give exercise", "suggest exercise",
+                             "what exercise", "exercise for", "exercise to", "gym", "running", "jogging",
+                             "walk", "walking", "squat", "pushup", "push up", "plank")):
         return "physical_exercise"
-    if any(w in m for w in ("sleep", "insomnia", "can't sleep", "cant sleep", "trouble sleeping", "nidra", "nsdr")):
+    # low energy / laziness — checked before sleep so "lazy" doesn't go to default
+    if any(w in m for w in ("lazy", "laziness", "lethargic", "unmotivated", "no motivation", "low energy",
+                             "low on energy", "energy low", "no drive", "sluggish", "drained", "dragging",
+                             "always tired", "chronically tired", "can't get up", "cant get up",
+                             "low to energy", "no power", "weak", "feeling weak", "fatigued all", "low vitality")):
+        return "low_energy"
+    if any(w in m for w in ("sleep", "insomnia", "can't sleep", "cant sleep", "trouble sleeping", "nidra", "nsdr",
+                             "wake up at night", "early waking", "oversleeping", "sleep quality", "deep sleep")):
         return "sleep"
-    if any(w in m for w in ("tired", "exhausted", "fatigue", "no energy")):
-        return "sleep"
-    if any(w in m for w in ("anxious", "anxiety", "panic", "panic attack", "worry", "nervous", "fear", "scared")):
+    if any(w in m for w in ("tired", "exhausted", "fatigue", "no energy", "always sleepy", "drowsy")):
+        return "low_energy"
+    if any(w in m for w in ("anxious", "anxiety", "panic", "panic attack", "worry", "nervous", "fear", "scared",
+                             "overthink", "overthinking", "racing thoughts", "what if", "dread", "apprehensive")):
         return "anxiety"
-    if any(w in m for w in ("stress", "stressed", "overwhelm", "pressure", "burnout", "too much", "can't cope", "cant cope")):
+    if any(w in m for w in ("stress", "stressed", "overwhelm", "pressure", "burnout", "too much", "can't cope",
+                             "cant cope", "overloaded", "too many things", "falling apart")):
         return "stress"
-    if any(w in m for w in ("focus", "concentrat", "distract", "attention", "mind wander", "can't focus", "cant focus")):
+    if any(w in m for w in ("focus", "concentrat", "distract", "attention", "mind wander", "can't focus",
+                             "cant focus", "brain fog", "unclear thinking", "foggy", "scattered", "adhd")):
         return "focus"
-    if any(w in m for w in ("sad", "depress", "unhappy", "empty", "numb", "hopeless", "low mood", "down", "crying", "cry")):
+    if any(w in m for w in ("sad", "depress", "unhappy", "empty", "numb", "hopeless", "low mood", "down",
+                             "crying", "cry", "no joy", "no pleasure", "meaningless", "worthless", "not worth it")):
         return "low_mood"
-    if any(w in m for w in ("pain", "headache", "tight", "tense", "sore", "neck", "shoulder", "body ache")):
+    if any(w in m for w in ("anger", "angry", "frustrat", "irritat", "mad", "rage", "furious", "annoyed",
+                             "losing temper", "short fuse", "explosive", "hot headed")):
+        return "anger"
+    if any(w in m for w in ("headache", "migraine", "head pain", "head ache", "throbbing head")):
+        return "headache"
+    if any(w in m for w in ("back pain", "backache", "back ache", "spine", "lower back", "upper back",
+                             "joint pain", "knee pain", "wrist pain", "muscle pain", "muscle ache",
+                             "body pain", "chronic pain", "fibromyalgia")):
+        return "body_pain"
+    if any(w in m for w in ("pain", "tight", "tense", "sore", "neck", "shoulder", "body ache", "stiff")):
         return "physical_tension"
-    if any(w in m for w in ("beginner", "new to", "never done", "first time", "don't know how", "dont know how", "where do i start")):
+    if any(w in m for w in ("motivat", "goal", "habit", "discipline", "procrastinat", "no willpower",
+                             "can't start", "cant start", "give up", "lack of motivation", "productivity")):
+        return "motivation"
+    if any(w in m for w in ("diet", "nutrition", "eat", "eating", "food", "vitamin", "mineral",
+                             "supplement", "protein", "weight", "calories", "healthy eating", "what to eat",
+                             "gut health", "gut", "digestion", "digestive", "bloat", "ibs")):
+        return "nutrition"
+    if any(w in m for w in ("immune", "immunity", "sick", "cold", "flu", "illness", "fever", "infection",
+                             "getting sick", "catch cold", "disease prevention", "boost immune")):
+        return "immune_health"
+    if any(w in m for w in ("confidence", "self esteem", "self-esteem", "insecure", "self worth",
+                             "self image", "body image", "not good enough", "comparison", "imposter")):
+        return "self_esteem"
+    if any(w in m for w in ("grief", "loss", "mourning", "death", "died", "miss someone", "bereav",
+                             "lost someone", "passing away", "losing someone")):
+        return "grief"
+    if any(w in m for w in ("addiction", "quit", "smoking", "alcohol", "drinking", "gaming addiction",
+                             "phone addiction", "social media addiction", "screen addiction", "compulsive")):
+        return "addiction"
+    if any(w in m for w in ("mindful", "present moment", "awareness", "mindfulness", "conscious", "grounded")):
+        return "mindfulness"
+    if any(w in m for w in ("posture", "sitting too long", "desk job", "screen time", "hunch", "slouch", "ergonomic")):
+        return "posture"
+    if any(w in m for w in ("relation", "partner", "family", "friend", "lonely", "alone", "breakup", "argument",
+                             "conflict", "communication", "toxic", "divorce", "marriage")):
+        return "relationships"
+    if any(w in m for w in ("job", "office", "deadline", "boss", "colleague", "career", "workload",
+                             "at work", "my work", "workplace", "meeting", "presentation", "work anxiety")):
+        return "work_stress"
+    if any(w in m for w in ("beginner", "new to", "never done", "first time", "don't know how",
+                             "dont know how", "where do i start", "how to start", "getting started")):
         return "beginner"
     if any(w in m for w in ("how long", "how many minute", "how much time", "duration", "how often", "how many times")):
         return "duration"
-    if any(w in m for w in ("why", "does it work", "science", "research", "evidence", "proof", "how does meditation")):
+    if any(w in m for w in ("why", "does it work", "science", "research", "evidence", "proof",
+                             "how does meditation", "how does breathing", "explain", "what happens")):
         return "why_meditation"
-    if any(w in m for w in ("job", "office", "deadline", "boss", "colleague", "career", "workload", "at work", "my work")):
-        return "work_stress"
-    if any(w in m for w in ("relation", "partner", "family", "friend", "lonely", "alone", "breakup", "argument")):
-        return "relationships"
-    if any(w in m for w in ("not working", "not helping", "doesn't work", "doesnt work", "pointless", "waste of time", "not feeling", "no difference")):
+    if any(w in m for w in ("not working", "not helping", "doesn't work", "doesnt work", "pointless",
+                             "waste of time", "not feeling", "no difference", "useless")):
         return "discouraged"
     if any(w in m for w in ("eeg", "brainwave", "wave", "frequency", "alpha", "beta", "theta", "delta", "gamma", "what is eeg")):
         return "eeg_explanation"
     if any(w in m for w in ("more", "another", "other option", "different", "something else", "alternative", "other technique")):
         return "more_options"
-    if any(w in m for w in ("start", "begin", "let's go", "let me start", "guide me", "walk me through", "step by step", "how do i do", "show me how")):
+    if any(w in m for w in ("start", "begin", "let's go", "let me start", "guide me", "walk me through", "step by step", "show me how")):
         return "start_session"
-    if any(w in m for w in ("meditat", "recommend", "suggest", "what should i do", "help me", "technique", "exercise", "what do you suggest")):
+    if any(w in m for w in ("meditat", "recommend", "suggest", "what should i do", "help me", "technique", "what do you suggest")):
         return "recommendation"
     if any(w in m for w in ("thank", "thanks", "great", "amazing", "helpful", "love it", "perfect", "awesome", "brilliant")):
         return "gratitude"
@@ -523,6 +572,11 @@ class ChatMessage(BaseModel):
     context: Optional[List[HistoryItem]] = []
 
 
+class GeneralChatMessage(BaseModel):
+    message: str
+    context: Optional[List[HistoryItem]] = []
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -575,6 +629,217 @@ def simulate_eeg(subject_id: Optional[int] = None):
         "original_label": sample["label"],
         "signal_preview": signal_data,
         "state_info": MENTAL_STATE_INFO[state],
+    }
+
+
+def _call_claude_general(message: str, history: list) -> str:
+    system = """You are Neuro AI, a warm and empathetic AI mental wellness companion.
+
+The user is describing their current mental state and condition directly — there is no EEG scan. Listen carefully to what they share and respond accordingly.
+
+RULES:
+- Be warm, conversational, and empathetic — a knowledgeable friend, not a clinical tool
+- Ask gentle clarifying questions if needed to understand their state
+- Provide personalized meditation, breathing exercises, or physical exercises based on what they tell you
+- Keep replies concise (2–4 sentences) unless the user asks for step-by-step instructions
+- For technique guides, number each step clearly
+- Answer any question about: meditation, mindfulness, breathing, sleep, stress, anxiety, focus, CBT, neuroplasticity, emotional regulation, mental health habits
+- For off-topic questions, gently redirect: "That's a bit outside my area — I focus on mental wellness..."
+- Use **bold** only for technique names, never for random emphasis
+- Use at most 1 emoji per message, only when natural
+- Vary your opening words — never start two consecutive replies the same way
+- If the user expresses thoughts of self-harm, compassionately encourage professional help"""
+
+    msgs = []
+    for h in history:
+        role = "user" if h.get("role") == "user" else "assistant"
+        msgs.append({"role": role, "content": h.get("text", "")})
+    msgs.append({"role": "user", "content": message})
+
+    resp = _claude.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=450,
+        system=system,
+        messages=msgs,
+    )
+    return resp.content[0].text
+
+
+def _general_fallback(intent: str) -> str:
+    bank = {
+        "greeting": [
+            "Hi! I'm your AI wellness guide. Tell me how you're feeling — stressed, anxious, tired, lazy, in pain, or just wanting to feel better — and I'll give you specific techniques for meditation, breathing, exercise, sleep, or nutrition. 💙",
+            "Welcome! Describe what's going on — your mood, energy, any physical symptoms, or mental challenges — and I'll tailor a health and wellness recommendation just for you.",
+            "Hello! I can help with stress, anxiety, low energy, sleep problems, focus, body pain, nutrition, motivation, and much more. What are you dealing with today?",
+        ],
+        "low_energy": [
+            "Feeling lazy or low-energy is often a mix of physical and mental signals. Here's how to reset:\n\n**Immediate energy boosters:**\n1. **Cold water splash** — cold water on face and wrists for 30 seconds. Triggers alertness instantly\n2. **20 jumping jacks** — gets blood and oxygen moving within 60 seconds\n3. **Kapalabhati breathing** — rapid forceful exhales through nose, 30 cycles. Spikes adrenaline naturally\n4. **5 minutes of sunlight** — steps outside. Light resets the circadian clock\n5. **Hydrate** — dehydration is the most overlooked cause of low energy. Drink 500ml water now\n\n**Longer-term fixes:** regular sleep schedule, reducing sugar, 20-minute walks daily, B12 and iron levels checked if this is chronic.",
+            "Low energy and laziness often have specific causes. Let's figure out yours:\n\n- **Physical tiredness** → you need rest, Yoga Nidra, or sleep improvement\n- **Mental fatigue** → you need a mental break, nature walk, or dopamine reset\n- **Motivational slump** → you need a small win, a 2-minute task, or a purpose reconnection\n- **Nutritional** → you may be low in iron, B12, or Vitamin D\n\nThe fastest general fix: **cold water + 10 minutes of brisk walking + 500ml water**. This combination shifts your brain chemistry within 15 minutes. Which type resonates most with you?",
+            "Here are proven techniques to beat low energy and laziness:\n\n1. **The 2-minute rule** — commit to just 2 minutes of any task. Your brain almost always continues past 2 minutes once started (this beats procrastination too)\n2. **Power nap** — 10–20 minutes (not more — more causes grogginess). Set an alarm\n3. **Energising breath** — rapid inhales-exhales through nose for 30 cycles, then 3 deep slow breaths\n4. **Cold shower** — 30 seconds of cold at end of your normal shower. Proven to increase alertness for 4+ hours\n5. **Move your body** — even 5 minutes of movement spikes dopamine and norepinephrine\n\nIf low energy is persistent (weeks), it may signal iron deficiency, thyroid issues, or poor sleep quality — worth checking with a doctor.",
+        ],
+        "breathing": [
+            "**Box Breathing** (used by military, surgeons, and athletes):\n\n1. Inhale for 4 counts\n2. Hold for 4 counts\n3. Exhale for 4 counts\n4. Hold empty for 4 counts\n\nRepeat 4–6 cycles. Activates the parasympathetic nervous system within 90 seconds. Use it before high-pressure situations, during panic, or whenever you feel overwhelmed.",
+            "**4-7-8 Breathing** — the fastest natural relaxation technique:\n\n1. Exhale completely through your mouth\n2. Inhale through nose for 4 counts\n3. Hold for 7 counts\n4. Exhale through mouth for 8 counts\n\nDo 4 cycles. The extended exhale activates your vagus nerve — your body's built-in calm switch. Most people feel significantly calmer within 3 minutes.",
+            "**Diaphragmatic (belly) breathing** — the foundation of stress relief:\n\n1. Place one hand on chest, one on belly\n2. Breathe so only the belly hand rises (chest stays still)\n3. Inhale for 4 counts, exhale for 6\n4. Continue for 5 minutes\n\nLonger exhales lower cortisol. This is the breathing pattern of deep sleep — you're teaching your nervous system that you're safe.",
+        ],
+        "physical_exercise": [
+            "Here are exercises matched to mental and physical wellness:\n\n**For energy and mood:**\n1. **20-minute brisk walk** — the most research-backed mood booster\n2. **10 jumping jacks + 10 squats + 10 push-ups** (3 rounds) — takes 8 minutes, spikes dopamine\n3. **Sun salutation** (yoga flow) — 5 rounds, 10 minutes\n\n**For stress and tension:**\n1. **Progressive muscle relaxation** — tense and release each muscle group\n2. **Forward fold** — hang arms and head down, hold 60 seconds\n3. **Neck rolls** — slow circles left and right, 5 each\n\n**For focus:**\n1. **7-minute HIIT circuit** — high intensity for 7 minutes before a work session\n2. **Yoga warrior poses** — held for 30 seconds each side\n\nWhat's your goal — energy, stress relief, or focus?",
+            "Physical movement is the most powerful mental health intervention we have. Here's a complete daily routine:\n\n**Morning (10 min):** 5 sun salutations → 1-minute cold shower → 500ml water\n**Midday (5 min):** Brisk walk or 3 rounds of squat/push-up/plank\n**Evening (15 min):** Yoga stretches (hips, hamstrings, chest, shoulders) → body scan meditation\n\nEven one of these makes a measurable difference. Which time of day works best for you?",
+        ],
+        "sleep": [
+            "Poor sleep is often about the hour BEFORE bed, not when you get into bed. Here's a full sleep protocol:\n\n**Wind-down routine (1 hour before):**\n1. No screens (phone, TV) — blue light suppresses melatonin\n2. Lower room temperature to 18–20°C (the brain needs to cool to sleep)\n3. **4-7-8 breathing** × 4 cycles\n4. Write down tomorrow's tasks (clears the mental RAM)\n\n**In bed:**\n5. **Body scan meditation** — slowly scan from head to feet, releasing tension\n6. **Military sleep method** — relax face muscles, drop shoulders, exhale and relax chest, then legs\n\n*Most sleep problems are solved by consistency — same sleep/wake time every day, even weekends.*",
+            "**Yoga Nidra (NSDR)** is the most effective sleep technique:\n\n1. Lie flat on your back (savasana)\n2. Rotate awareness through body parts — feel each part without moving it\n3. Visualise pairs of opposites (heavy/light, warm/cool)\n4. Rest in the hypnagogic state between waking and sleep\n\n30 minutes of Yoga Nidra = approximately 2 hours of deep sleep, according to research. It's used by surgeons before complex operations.\n\nFor insomnia: the most evidence-backed treatment is **CBT-I (Cognitive Behavioural Therapy for Insomnia)** — I can walk you through the core techniques if you'd like.",
+            "Here are the top sleep tips backed by sleep science:\n\n1. **Consistent schedule** — same bedtime/wake time daily (most important factor)\n2. **No caffeine after 2pm** — caffeine has a 6-hour half-life\n3. **Morning sunlight** — 10 minutes outside within 1 hour of waking sets circadian rhythm\n4. **Cold room** — 18°C is optimal for sleep onset\n5. **Magnesium glycinate** — the most sleep-supportive supplement (400mg before bed)\n6. **4-7-8 breathing** in bed\n7. **Avoid alcohol** — it fragments sleep architecture even if you fall asleep faster\n\nWhich of these are you already doing?",
+        ],
+        "anxiety": [
+            "Anxiety is your brain's alarm system being triggered when there's no actual danger. Here are the most effective interventions:\n\n**Immediate (right now):**\n• **5-4-3-2-1 Grounding:** Name 5 things you see, 4 you can touch, 3 you hear, 2 you smell, 1 you taste\n• **Cold water on face** — activates the dive reflex, drops heart rate within 30 seconds\n• **Box breathing** × 6 cycles\n\n**For recurring anxiety:**\n• **Journaling** — write the anxious thought, then write evidence for and against it (CBT technique)\n• **Physical exercise** — 20 minutes reduces anxiety as effectively as medication in studies\n• **Limiting caffeine and alcohol** — both significantly worsen anxiety\n\nIs your anxiety more physical (racing heart, tight chest) or mental (racing thoughts, worst-case scenarios)?",
+            "Anxiety feels different from stress — it's often future-focused fear rather than present-moment pressure. The fastest reset:\n\n1. **STOP technique:** Stop. Take a breath. Observe what you're feeling without judging it. Proceed with intention\n2. **Physiological sigh:** Double inhale through nose (sniff twice), long slow exhale through mouth. This is the fastest way to reduce physiological arousal\n3. **Name it to tame it:** Say out loud 'I notice I'm feeling anxious' — labelling reduces amygdala activation\n4. **Move your body** — anxiety is energy that needs somewhere to go. Walk, shake, dance\n\nFor panic attacks specifically: focus on the exhale, not the inhale. Keep exhales longer than inhales.",
+        ],
+        "stress": [
+            "Stress lives in both the mind and the body. The fastest mind-body reset:\n\n**2-minute emergency protocol:**\n1. Stop what you're doing\n2. **Box breathe** × 4 cycles (4 counts each)\n3. **Tense every muscle** in your body for 5 seconds, then release completely\n4. Say to yourself: 'This moment will pass. I can handle this.'\n\n**15-minute deeper reset:**\n1. **Progressive Muscle Relaxation** — work from feet to face, tensing and releasing each group\n2. **Body scan meditation** — 10 minutes of non-judgemental body awareness\n3. **Journaling** — brain dump every open concern. Externalising reduces cognitive load immediately\n\nChronic stress (lasting weeks) requires lifestyle changes: sleep, exercise, social connection, and often professional support.",
+            "Here's how stress actually works and how to stop it:\n\nStress triggers cortisol and adrenaline — designed for short-term survival. Problems happen when these stay elevated long-term. The antidote:\n\n1. **Movement** — metabolises stress hormones faster than anything else. Even a 10-minute walk\n2. **Extended exhale breathing** — 4 counts in, 8 counts out. Activates vagus nerve\n3. **Cold exposure** — 30 second cold shower. Raises dopamine 250% and normalises cortisol\n4. **Social connection** — talking to someone releases oxytocin, which directly blocks cortisol\n5. **Limit news and social media** — major cortisol triggers\n\nWhat's the main source of your stress right now?",
+        ],
+        "focus": [
+            "Poor focus often has three causes: overstimulation, poor sleep, or low dopamine. Here's the fix for each:\n\n**Immediate focus boost:**\n1. **Clear your environment** — close tabs, silence phone, one task only\n2. **5 minutes of meditation** — single-point focus on breath before starting work\n3. **Cold water on face** — spikes norepinephrine (focus neurochemical)\n4. **Set a 25-minute timer** (Pomodoro) — finite time blocks make the brain commit\n\n**Brain fog / scattered thinking:**\n• Drink water first (dehydration is a major cause of brain fog)\n• 10-minute walk (increases BDNF — the brain's growth factor)\n• Check your sleep — one poor night reduces cognitive function 20–40%\n\n**Sustained focus (for studying/deep work):**\n• Work in 90-minute ultradian cycles with 20-minute breaks\n• No caffeine after 2pm\n• **Binaural beats** (40Hz gamma) in headphones while working",
+            "**The science of focus:** your brain has a limited daily supply of focused attention. Here's how to use it well:\n\n1. **Do your hardest task first** — willpower and focus peak in the first 2 hours after waking\n2. **Single-tasking** — multitasking reduces IQ by 10 points per study. One task at a time\n3. **Single-Point Concentration meditation** — stare at a dot or candle flame, hold attention there. Do 10 minutes before work. Trains the return-to-focus muscle\n4. **Movement breaks** — 5-minute walk every 45–90 minutes restores prefrontal cortex function\n5. **Avoid sugar and refined carbs** — they cause energy crashes and brain fog\n\nAre you struggling to start tasks, or to maintain focus once you start?",
+        ],
+        "low_mood": [
+            "Low mood is real and deserves real attention. Here are evidence-based approaches:\n\n**Right now:**\n1. **Place both hands on your heart and take 3 slow breaths** — activates the brain's caregiving system\n2. **Name one small thing that's okay** — shifts the brain's threat-scanning mode\n3. **Get sunlight** — 10 minutes outside. Light directly raises serotonin\n4. **Move your body** — even a 10-minute walk raises mood measurably\n\n**Ongoing:**\n• **Loving-Kindness (Metta) meditation** — clinically proven to lift mood within 2 weeks\n• **Gratitude journaling** — 3 things daily rewires the brain's negativity bias\n• **Social contact** — isolation deepens low mood. Even a short message to a friend helps\n• **Reduce alcohol** — it's a depressant that significantly worsens low mood\n\nIf this has lasted more than 2 weeks, please consider speaking to a healthcare professional — persistent low mood is treatable.",
+            "One thing that's important: low mood doesn't mean something is wrong with you. It's often a signal to rest, reconnect, or change something. Here's what helps:\n\n1. **Behavioural activation** — the CBT technique of gently doing things even when you don't feel like it. Low mood kills motivation first, but action usually restores feeling\n2. **Loving-Kindness meditation** — sit, breathe, silently repeat: 'May I be happy. May I be healthy. May I be at peace.' Extend to others. 10 minutes daily\n3. **Physical exercise** — the most powerful antidepressant we know\n4. **Sleep** — poor sleep and low mood are deeply linked\n5. **Connection** — loneliness and low mood reinforce each other. Reach out to one person today\n\nWhat's been going on for you?",
+        ],
+        "anger": [
+            "Anger is often a secondary emotion — it usually masks hurt, fear, or frustration underneath. In the moment:\n\n**Immediate anger tools:**\n1. **Leave the situation** if possible — even 2 minutes changes the physiological state\n2. **Cold water on face or wrists** — activates dive reflex, drops heart rate fast\n3. **Slow exhale breathing** — breathe out for twice as long as you breathe in (4 in, 8 out)\n4. **Physical release** — brisk walk, push-ups, or punching a pillow. Metabolises adrenaline\n5. **Count to 10** — creates a gap between stimulus and response\n\n**Longer-term anger management:**\n• **Journaling** — write what happened, how you felt, and what need was unmet\n• **Regular exercise** — dramatically reduces baseline irritability\n• **Sleep** — poor sleep is one of the biggest triggers for disproportionate anger\n• **Mindfulness practice** — creates the 'pause' between trigger and reaction over time",
+            "Anger that comes quickly or intensely usually means your nervous system is already dysregulated (high cortisol, poor sleep, or accumulated stress). The fix is usually upstream:\n\n1. **Prioritise sleep** — lack of sleep literally shrinks the prefrontal cortex (impulse control)\n2. **Daily exercise** — burns off the cortisol and adrenaline that prime the anger response\n3. **Stress management** — anger is a pressure valve. Reduce total pressure and the valve triggers less\n4. **The STOP technique:** Stop → Take a breath → Observe what's underneath (hurt? fear?) → Proceed with intention\n5. **Compassion practice** — Loving-Kindness meditation reduces reactivity over time\n\nWhat tends to trigger your anger most often?",
+        ],
+        "headache": [
+            "Headaches have different types and need different approaches:\n\n**Tension headache (most common — feels like a band around the head):**\n1. **Neck and shoulder stretches** — slowly roll head, release jaw, drop shoulders\n2. **Peppermint oil** on temples and back of neck\n3. **Cold or warm compress** on forehead/neck (experiment — both work for different people)\n4. **Drink water** — dehydration causes 60% of tension headaches\n5. **Step away from screens** — 20-20-20 rule: every 20 min, look 20 feet away for 20 seconds\n\n**Migraine:**\n• Dark, quiet room\n• Cold compress on forehead\n• Caffeine in small amounts (constricts blood vessels)\n• Magnesium glycinate supplement (preventative for frequent migraines)\n• Identify triggers: common ones are hormones, certain foods (aged cheese, wine), bright lights, disrupted sleep\n\n**Prevention:** regular sleep, hydration, stress management, and reducing caffeine are the four pillars.",
+        ],
+        "body_pain": [
+            "Chronic body pain often has both physical and nervous system components. Here's a comprehensive approach:\n\n**For back pain:**\n1. **Cat-cow stretch** — on hands and knees, arch and round your back slowly, 10 cycles\n2. **Child's pose** — kneel, fold forward, arms extended, hold 60 seconds\n3. **Glute bridges** — lie on back, knees bent, raise hips × 15\n4. **Strengthen your core** — most back pain comes from weak core muscles\n5. **Walking** — one of the best things for back pain. 20 minutes daily\n\n**For joint pain:**\n• **Gentle movement** (not rest) — joints need fluid movement to stay lubricated\n• **Anti-inflammatory diet** — reduce sugar, processed food, vegetable oils\n• **Omega-3** (fish oil) — potent natural anti-inflammatory\n• **Turmeric with black pepper** — curcumin is clinically effective for joint inflammation\n\n**Mind-body:** chronic pain has a significant neurological component. Mindfulness-Based Stress Reduction (MBSR) reduces chronic pain by 40–50% in studies.",
+        ],
+        "physical_tension": [
+            "Physical tension in the body is where emotional stress goes when it has nowhere else to go. Here's how to release it:\n\n**Immediate release:**\n1. **Progressive Muscle Relaxation** — starting from feet, tense each muscle group for 5 seconds, then release. The contrast between tension and release is what releases stored stress\n2. **Neck rolls** — slow, full circles. 5 each direction\n3. **Shoulder shrugs** — raise both shoulders to ears, hold 5 seconds, drop hard × 8\n4. **Body shake** — literally shake your arms, legs, and torso for 30–60 seconds. Used in trauma therapy\n\n**For chronic tension (daily practice):**\n• **Yin yoga** — deep, long-held stretches (2–5 minutes each pose)\n• **Foam rolling** — self-massage that breaks up fascial adhesions\n• **Regular massage** — monthly reduces chronic tension significantly\n• **Box breathing before sleep** — prevents overnight tension accumulation",
+        ],
+        "motivation": [
+            "Motivation is not a personality trait — it's a neurochemical state driven by dopamine. Here's how to work with your brain:\n\n**Why motivation disappears:**\nProcrastination is almost always avoidance of negative emotion (fear of failure, overwhelm, boredom) rather than laziness. Your brain is protecting you.\n\n**What actually works:**\n1. **The 2-minute rule** — commit to just 2 minutes. Your brain continues past 2 minutes 80% of the time\n2. **Implementation intentions** — 'I will [task] at [time] in [place]' is 2–3× more effective than 'I should do [task]'\n3. **Reduce friction** — make the desired behaviour the easiest option (gym bag ready the night before, etc.)\n4. **Reward immediately** — pair the task with something pleasurable immediately after\n5. **Identity-based habits** — 'I am someone who exercises' rather than 'I'm trying to exercise'\n\n**Dopamine reset:** avoid scrolling, sugar, and overstimulation for a few hours — this resets your dopamine baseline and makes normal activities feel rewarding again.",
+            "Procrastination and lack of motivation often come down to task design, not willpower:\n\n1. **Break it down** — the task is too big. What's the smallest possible first step?\n2. **Time-box it** — commit to 25 minutes (Pomodoro). Knowing it ends reduces resistance\n3. **Environment design** — go to a different location (library, café). New environment breaks mental associations\n4. **Body first** — 10 minutes of exercise before the task spikes dopamine and focus\n5. **Connect to purpose** — ask 'why does this matter?' and write 3 reasons\n\n*Motivation follows action, not the other way around.* Start tiny and momentum builds.",
+        ],
+        "nutrition": [
+            "Nutrition has a profound impact on mental health, energy, and focus. The basics that make the biggest difference:\n\n**Brain-supporting foods:**\n• **Omega-3** (fatty fish, walnuts, flaxseed) — reduces depression and anxiety\n• **Fermented foods** (yoghurt, kefir, kimchi) — gut health directly impacts mental health via the gut-brain axis\n• **Dark leafy greens** — magnesium for stress, folate for mood\n• **Berries** — antioxidants that reduce brain inflammation\n• **Dark chocolate (70%+)** — flavonoids, magnesium, and a small dopamine boost\n\n**What to reduce:**\n• Sugar — causes energy crashes, worsens anxiety and depression\n• Processed/ultra-processed food — inflammatory, gut-disrupting\n• Excessive caffeine — worsens anxiety and disrupts sleep\n• Alcohol — depressant that disrupts sleep architecture\n\n**Key supplements worth considering:**\n• Magnesium glycinate (sleep, anxiety)\n• Vitamin D3 (mood, immune system)\n• B12 (energy, nervous system)\n• Omega-3 fish oil\n\nWhat specific nutrition question do you have?",
+        ],
+        "immune_health": [
+            "Immune health is strongly linked to sleep, stress, and gut health. Here's how to support your immune system:\n\n**The foundations:**\n1. **Sleep 7–9 hours** — during sleep your immune system makes cytokines and T-cells. One poor sleep night reduces immune function by 30%\n2. **Manage stress** — chronic stress suppresses the immune system via cortisol\n3. **Exercise regularly** — moderate exercise (not extreme) boosts immune surveillance\n4. **Eat whole foods** — especially colourful vegetables, fruits, fermented foods\n\n**Evidence-based immune boosters:**\n• **Vitamin D3** (most people are deficient) — directly regulates immune response\n• **Zinc** — shortens illness duration when taken at onset\n• **Vitamin C** — supports immune cell function (food sources better than supplements)\n• **Elderberry** — reduces cold duration in studies\n• **Probiotics** — 70% of immune system is in the gut\n\n**When you feel illness coming on:**\n• Rest immediately — fight the urge to push through\n• Increase fluids and sleep\n• Garlic (allicin is antimicrobial), ginger (anti-inflammatory), honey with warm water",
+        ],
+        "self_esteem": [
+            "Low self-esteem is one of the most common and most treatable issues in mental health. Here's what actually works:\n\n**The science:** self-esteem is not fixed — it's a habit of thought and a set of behaviours. You can change both.\n\n**Practical approaches:**\n1. **Self-compassion practice** — treat yourself the way you'd treat a good friend. When you make a mistake, say 'This is hard. Other people feel this too. May I be kind to myself.' (Kristin Neff's research shows this works better than self-esteem affirmations)\n2. **Competence building** — self-esteem grows from doing hard things. Small daily challenges add up\n3. **Values clarification** — self-esteem based on external validation is fragile. Based on your own values, it's stable\n4. **Cognitive reframing** — challenge the inner critic. Is the thought true? Would you say it to a friend?\n5. **Body movement** — posture, exercise, and how you carry yourself change how you feel about yourself\n\nWhat area of self-worth are you struggling with most?",
+        ],
+        "grief": [
+            "Grief is not a problem to be solved — it's the natural response to love. There's no right way or right timeline. What helps:\n\n**Allowing the process:**\n• Give yourself permission to feel all of it — sadness, anger, numbness, even moments of happiness (these are all normal)\n• Grief is not linear. The Kübler-Ross stages (denial, anger, bargaining, depression, acceptance) happen in any order, many times\n\n**Practical support:**\n1. **Don't isolate** — grief is harder alone. Reach out, even when it feels pointless\n2. **Routine** — maintaining basic structure (eating, sleeping, moving) keeps the nervous system anchored\n3. **Grief journaling** — write about the person, write to them, write about what you miss\n4. **Loving-Kindness meditation** — extend compassion first to yourself, then to the person you've lost\n5. **Physical movement** — grief is stored in the body. Gentle movement helps process it\n\nIf you're struggling with complicated grief, a grief-specialised therapist makes a significant difference. You don't have to carry this alone. 💙",
+        ],
+        "addiction": [
+            "Breaking habits and addictions is hard because they involve real neurological changes in the brain's reward system. What actually works:\n\n**Understanding it:** addiction is the brain's dopamine system getting hijacked. The substance/behaviour provides a dopamine hit the brain starts to rely on. Removing it creates withdrawal — real physiological discomfort.\n\n**Evidence-based approaches:**\n1. **Replace, don't just remove** — identify what need the habit meets (stress relief, boredom, social connection) and replace it with a healthier behaviour that meets the same need\n2. **Urge surfing** — when a craving hits, observe it without acting. Cravings peak at 3–5 minutes then drop. Surf the wave\n3. **Environment design** — remove the cue (no cigarettes at home, delete the app, etc.)\n4. **Delay and distract** — commit to waiting 10 minutes and doing something physical. Most cravings pass\n5. **Social support** — telling someone you trust significantly improves success rates\n\nFor alcohol, nicotine, or substance use disorder, professional support (including medication) makes a dramatic difference. There's no shame in getting help.",
+        ],
+        "mindfulness": [
+            "Mindfulness is the practice of paying attention to the present moment without judgement. It's one of the most researched wellness interventions:\n\n**Core practice — Breath Awareness:**\n1. Sit comfortably and close your eyes\n2. Focus on the physical sensation of breathing — the air at your nostrils, or the rise and fall of your chest\n3. When your mind wanders (it will — this is normal), gently notice and return\n4. The 'noticing and returning' IS the practice. Each return builds the focus muscle\n\nStart with 5 minutes daily. Research shows structural brain changes after 8 weeks of consistent practice.\n\n**Informal mindfulness:**\n• Mindful eating — taste every bite, eat slowly\n• Mindful walking — feel every footfall, notice surroundings\n• Mindful conversations — full presence, no phone\n\n**Apps:** Insight Timer (free), Headspace, or Calm for guided sessions.",
+        ],
+        "posture": [
+            "Poor posture affects mood, energy, confidence, and physical health. Here's a complete fix:\n\n**The problem:** sitting rounds the spine, tightens hip flexors, weakens glutes and core, and compresses the chest — which literally restricts breathing and can cause anxiety.\n\n**Immediate fixes:**\n1. **Screen at eye level** — top of screen at eye height\n2. **Chair height** — feet flat, knees at 90 degrees, back supported\n3. **Every 30 minutes:** stand, roll shoulders back, do 10 squats\n\n**Daily posture routine (10 min):**\n1. **Chest opener** — clasp hands behind back, squeeze shoulder blades, look up, hold 30 seconds\n2. **Hip flexor stretch** — lunge position, drop back knee, lean forward, hold 60 seconds each side\n3. **Cat-cow** — 10 slow cycles\n4. **Wall angels** — stand against wall, slide arms up and down like a snow angel × 10\n\n**Long-term:** strengthen glutes, core, and mid-back. Yoga and Pilates are excellent for this.",
+        ],
+        "relationships": [
+            "Relationship stress is some of the most emotionally draining there is — it hits the primal need for connection and safety. Here's what helps:\n\n**When in conflict:**\n1. **Take a break** — if you're flooded (heart rate >100), you physically can't have a productive conversation. Agree to pause for 20 minutes\n2. **Slow breathing** — reduces physiological arousal so the thinking brain comes back online\n3. **I-statements** — 'I feel hurt when...' rather than 'You always...'\n4. **Repair attempts** — reaching out after conflict is a skill that predicts relationship success more than conflict frequency\n\n**For loneliness:**\n• Reach out to one person today — even a text\n• Join a class, group, or community (shared activity is the fastest way to build connection)\n• **Loving-Kindness meditation** reduces feelings of isolation and loneliness measurably\n\n**For general relationship stress:** journaling about your feelings before speaking helps you understand what you actually need.",
+        ],
+        "work_stress": [
+            "Work stress often comes from a combination of cognitive overload, lack of control, and unclear boundaries. Here's a tactical approach:\n\n**Immediate (at desk):**\n1. **Brain dump** — write every open task/concern. Externalising reduces cognitive load instantly\n2. **Feet on floor, palms on desk, 5 slow breaths** — grounds the nervous system mid-workday\n3. **Priority matrix** — what's urgent AND important vs. just urgent? Do those first\n4. **Box breathing** before a stressful meeting\n\n**End-of-day ritual (essential for recovery):**\n• Close laptop, write tomorrow's top 3 tasks, say 'shut down complete'\n• 10-minute walk to transition from work mode\n• No work email/messages after a set time\n\n**Long-term burnout prevention:**\n• Protect one 2-hour deep work block daily (no meetings)\n• Exercise 3× per week — reduces work stress more than any other habit\n• Say no to non-essential commitments\n• If burnout is severe, it may require medical leave — burnout is a recognised medical condition",
+        ],
+        "beginner": [
+            "Perfect place to start. The biggest beginner mistake is aiming too high — people try 20-minute meditation sessions and quit because they can't sit still. Start tiny:\n\n**Your first week:**\n- **Day 1–3:** Just 3 minutes of breath counting. Sit, close eyes, count breaths 1–10, repeat\n- **Day 4–5:** 5 minutes of box breathing (4-4-4-4 counts)\n- **Day 6–7:** 5 minutes of body scan — lie down, scan from head to feet, notice sensations\n\n**The golden rule:** you haven't 'failed' when thoughts appear. Thoughts always appear. The practice IS noticing you've wandered and coming back. That's the exercise. Every return is a rep.\n\nAfter 1 week of this, you'll notice a real difference in how quickly you can calm yourself down in stressful moments.",
+        ],
+        "duration": [
+            "Research shows meaningful benefits from meditation and breathwork start at:\n• **8–12 minutes per day** — measurable mood and focus improvement\n• **20 minutes per day** — the sweet spot for deep states and neuroplasticity\n• **8 weeks of daily practice** — structural brain changes visible on MRI\n\nBut consistency beats duration every time. A daily 5-minute practice beats a weekly 45-minute session for neurological rewiring.\n\nFor exercise: **150 minutes per week** of moderate activity (WHO guideline) is the threshold for mental health benefits — that's just 22 minutes daily.",
+        ],
+        "why_meditation": [
+            "The science is solid and fascinating:\n\n**What meditation physically does to the brain:**\n• Thickens the **prefrontal cortex** (decision-making, impulse control, emotional regulation)\n• Shrinks the **amygdala** (the brain's threat/fear centre)\n• Increases **grey matter density** in areas associated with self-awareness and compassion\n• Reduces **default mode network activity** (the mind-wandering 'me' thoughts linked to depression)\n\nThese changes are visible on MRI after just 8 weeks of daily practice.\n\n**Breathing works** by directly controlling the autonomic nervous system — specifically, extended exhales activate the parasympathetic ('rest and digest') branch, lowering heart rate, cortisol, and muscle tension.\n\n**Exercise works** by releasing BDNF (brain-derived neurotrophic factor) — essentially fertiliser for neurons — and raising serotonin, dopamine, and norepinephrine simultaneously.",
+        ],
+        "discouraged": [
+            "Feeling like it's not working is incredibly common — and it's usually a sign you're doing it right but haven't hit the threshold yet. Most people feel a difference after **2 weeks of daily practice**, not after one session.\n\nYour brain literally needs time to grow new neural pathways. Think of it like going to the gym — one session doesn't build muscle, but two weeks of daily sessions creates measurable change.\n\nThe mind resisting meditation is exactly why you need it. That restlessness, that 'this is pointless' feeling — that's the default mode network defending its territory.\n\nWhat specifically feels like it's not working? Is your mind too busy? Are you falling asleep? Feeling anxious during the session? Each of those has a different fix.",
+        ],
+        "gratitude": [
+            "You're very welcome! Remember: consistency is everything with these practices. Even 5–10 minutes daily makes a measurable difference within 2 weeks. Come back any time you need support. 💙",
+            "So glad that helped! The research is clear — every session counts, even the imperfect ones. Keep going. 💙",
+        ],
+        "recommendation": [
+            "Based on what you've shared, here's my recommendation:\n\n**Start with:** 5 minutes of **Box Breathing** (4 counts in, hold, out, hold) — this works for almost any mental state and takes effect within 2 minutes.\n\n**Then:** A 10-minute **Body Scan Meditation** — lie down, close eyes, slowly scan from head to feet noticing sensations without judging them.\n\n**For your body:** a 15-minute gentle walk outside. The combination of movement, sunlight, and breathing in fresh air is the most research-backed mood intervention we have.\n\nTell me more about specifically how you're feeling and I can give you a more targeted recommendation.",
+        ],
+        "start_session": [
+            "Let's begin right now. 🧘 Find a comfortable seated or lying position.\n\n**5-minute Breath Awareness Meditation:**\n\n1. Close your eyes and take 3 deep breaths to settle in\n2. Let your breath return to its natural rhythm — don't control it, just observe it\n3. Notice the air entering at your nostrils, the brief pause, the release\n4. When a thought appears (and they will), simply notice: 'thinking' — and gently return to the breath\n5. There's nowhere to get to. Just this breath. Then this one. Then this one.\n\nSet a timer for 5 minutes. When it rings, slowly open your eyes and take 30 seconds before moving. 💙",
+        ],
+        "more_options": [
+            "Here's a different approach you might not have tried:\n\n**Loving-Kindness (Metta) Meditation:**\n1. Sit comfortably and close your eyes\n2. Bring yourself to mind and silently repeat: 'May I be happy. May I be healthy. May I be at peace.'\n3. Gradually extend this wish to someone you love, then a neutral person, then a difficult person\n4. Finally extend it to all beings\n\nThis practice has the most research backing for reducing depression, anxiety, loneliness, and interpersonal conflict — and most people find it surprisingly moving even the first time.",
+        ],
+        "eeg_explanation": [
+            "EEG (electroencephalography) measures your brain's electrical activity across five frequency bands:\n\n• **Delta (0.5–4 Hz)** — Deep sleep and physical restoration\n• **Theta (4–8 Hz)** — Creativity, intuition, light trance, drowsiness\n• **Alpha (8–13 Hz)** — Calm, relaxed, eyes-closed alertness\n• **Beta (13–30 Hz)** — Active thinking, concentration (elevated = stress/anxiety)\n• **Gamma (30–100 Hz)** — Peak performance, insight, intense focus\n\nThe NeuroTherapy app analyses your dominant band to classify your mental state and match you with the most effective techniques for that state.",
+        ],
+        "default": [
+            "I can help with a wide range of health and wellness topics — stress, anxiety, low energy, sleep, focus, body pain, nutrition, motivation, relationships, anger, and more. Just describe what you're experiencing and I'll give you specific, actionable advice.\n\nWhat's going on for you right now?",
+            "Tell me more about how you're feeling — physically or mentally. For example: 'I feel tired and unmotivated', 'I have a lot of stress from work', 'I can't sleep', 'I feel anxious', 'I have low energy', 'I have back pain'. The more specific you are, the better I can help.",
+            "I'm here to help with your health and wellbeing. I cover: meditation, breathing techniques, physical exercise, sleep improvement, stress and anxiety management, nutrition, focus and productivity, pain relief, emotional health, and habit change.\n\nWhat would you like to work on?",
+        ],
+    }
+    templates = bank.get(intent, bank["default"])
+    return random.choice(templates)
+
+
+@app.post("/general/chat")
+def general_chat(body: GeneralChatMessage):
+    """
+    Meditation chat endpoint — no EEG data required.
+    User describes their condition directly and AI responds with wellness guidance.
+    """
+    history = [h.model_dump() for h in body.context]
+    intent = _detect_intent(body.message)
+
+    if _claude is not None:
+        try:
+            response = _call_claude_general(body.message, history)
+        except Exception:
+            response = _general_fallback(intent)
+    else:
+        response = _general_fallback(intent)
+
+    general_suggestions = {
+        "greeting":        ["I'm feeling stressed", "I'm anxious", "I have low energy", "Help me sleep better"],
+        "low_energy":      ["Physical exercises for energy", "Breathing for energy", "Nutrition for energy", "Motivation tips"],
+        "breathing":       ["Physical exercises", "Guide me through meditation", "Help me sleep", "Why does breathing help?"],
+        "physical_exercise": ["Breathing exercise", "Meditation guide", "Nutrition tips", "I have low energy"],
+        "anxiety":         ["Breathing for anxiety", "Physical grounding exercises", "Sleep help", "I feel stressed too"],
+        "stress":          ["Physical exercises for stress", "Breathing for stress", "Work stress help", "Nutrition for stress"],
+        "sleep":           ["Yoga Nidra guide", "Breathing for sleep", "Nutrition for sleep", "Why can't I sleep?"],
+        "focus":           ["Physical exercises for focus", "Breathing for focus", "Motivation tips", "Brain nutrition"],
+        "low_mood":        ["Loving-Kindness meditation", "Physical movement", "Nutrition for mood", "I feel anxious too"],
+        "anger":           ["Breathing for anger", "Physical release exercises", "Why do I get angry?", "Stress help"],
+        "headache":        ["Breathing for headache", "Neck stretches", "Nutrition for headaches", "Sleep help"],
+        "body_pain":       ["Gentle exercises for pain", "Breathing for pain", "Anti-inflammatory nutrition", "Posture tips"],
+        "physical_tension": ["Progressive muscle relaxation", "Breathing exercise", "Gentle stretches", "Stress help"],
+        "motivation":      ["Physical exercises for motivation", "Habit building tips", "Focus techniques", "Energy boost"],
+        "nutrition":       ["Sleep and nutrition", "Nutrition for energy", "Nutrition for anxiety", "Supplements guide"],
+        "immune_health":   ["Sleep for immunity", "Nutrition for immunity", "Stress and immunity", "Exercise for immunity"],
+        "self_esteem":     ["Mindfulness practice", "Physical exercises", "Motivation tips", "Low mood help"],
+        "grief":           ["Loving-Kindness meditation", "Physical movement for grief", "Sleep help", "Anxiety help"],
+        "addiction":       ["Breathing for cravings", "Physical exercise for habits", "Motivation tips", "Stress help"],
+        "mindfulness":     ["Breathing exercise", "Physical exercises", "Sleep improvement", "Focus techniques"],
+        "posture":         ["Back pain exercises", "Neck stretches", "Physical exercises", "Breathing correctly"],
+        "relationships":   ["Stress help", "Breathing for emotions", "Meditation for loneliness", "Anger management"],
+        "work_stress":     ["Breathing at desk", "Physical exercises for burnout", "Sleep after work", "Focus techniques"],
+        "beginner":        ["Start first meditation", "Breathing exercise", "Physical exercises", "How long to meditate?"],
+        "discouraged":     ["Why does it take time?", "Shorter technique 5 min", "Physical exercises instead", "Try again"],
+        "default":         ["I'm feeling stressed", "I have low energy", "Help me sleep", "I'm anxious"],
+    }
+    suggestions = general_suggestions.get(intent, general_suggestions["default"])
+
+    return {
+        "response": response,
+        "suggestions": suggestions,
+        "powered_by": "claude" if _claude is not None else "rule-based",
     }
 
 

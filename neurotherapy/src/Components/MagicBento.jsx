@@ -27,7 +27,7 @@ const cardData = [
     {
         color: '#120F17',
         title: 'Guided Meditation',
-        description: 'Relax with AI-powered meditation powered by Wysa integration',
+        description: 'Relax with AI-powered meditation powered by Neuro AI',
         label: 'Mind Calm'
     },
     {

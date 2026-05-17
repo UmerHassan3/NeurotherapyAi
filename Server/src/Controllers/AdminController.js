@@ -1,5 +1,6 @@
 import User from "../Models/Auth.Model.js";
 import Contact from "../Models/Contact.Model.js";
+import ChatSession from "../Models/ChatSession.Model.js";
 import ApiResponse from "../Utils/ApiResponse.js";
 import generateContactEmail from "../Utils/generateContactEmail.js";
 import { transporter } from "../Utils/mailer.js";
@@ -99,6 +100,22 @@ export const deleteContact = async (req, res) => {
         )
     }
 }
+
+export const getUserSessions = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!userId) {
+            return res.status(400).json(new ApiResponse(400, null, "User ID required"));
+        }
+        const sessions = await ChatSession.find({ userId })
+            .sort({ createdAt: -1 })
+            .limit(50);
+        return res.status(200).json(new ApiResponse(200, sessions, "Sessions fetched successfully"));
+    } catch (error) {
+        console.error("Get User Sessions Error:", error);
+        return res.status(500).json(new ApiResponse(500, null, "Failed to fetch sessions"));
+    }
+};
 
 export const sendReply = async (req, res) => {
     try {
