@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { MuseClient } from "muse-js";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
@@ -448,7 +449,7 @@ function EEGPanel({ eegData }) {
           <p className="text-xs opacity-80">{eegData.state_info.description}</p>
         </div>
         <div className="ml-auto text-right text-xs opacity-80">
-          <p>Subject #{eegData.subject_id}</p>
+          <p>{eegData.subject_id != null ? `Subject #${eegData.subject_id}` : "Live Device"}</p>
           <p>Session {eegData.session}</p>
           <p className="mt-1 opacity-70">{eegData.dataset}</p>
         </div>
@@ -529,18 +530,128 @@ const THERAPIES = [
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Therapy() {
   const [selectedTherapy, setSelectedTherapy] = useState(null);
-  const [phase, setPhase] = useState("idle"); // idle | connecting | analyzing | ready
+  const [phase, setPhase] = useState("idle"); // idle | connecting | recording | analyzing | ready
+  const [connectionMode, setConnectionMode] = useState("demo"); // "device" | "demo"
   const [progress, setProgress] = useState(0);
   const [stepLabel, setStepLabel] = useState("");
   const [eegData, setEegData] = useState(null);
   const [error, setError] = useState(null);
   const [chatMode, setChatMode] = useState(false);
+  const [liveSignal, setLiveSignal] = useState([]);
+  const [recordingPct, setRecordingPct] = useState(0);
+  const museClientRef = useRef(null);
+  const eegBufferRef = useRef([[], [], [], []]); // TP9, AF7, AF8, TP10
 
   const runAnalysis = async (isDevice) => {
     setError(null);
+
+    // ── Real Muse 2/S device path ──────────────────────────────────────────
+    if (isDevice) {
+      if (!navigator?.bluetooth) {
+        setError(
+          "Web Bluetooth is not supported in this browser. Please use Google Chrome or Microsoft Edge on desktop."
+        );
+        return;
+      }
+
+      setConnectionMode("device");
+      setPhase("connecting");
+
+      try {
+        const client = new MuseClient();
+        museClientRef.current = client;
+
+        // connect() MUST be called close to the user-gesture — opens BT picker
+        await client.connect();
+        await client.start();
+
+        setPhase("recording");
+        eegBufferRef.current = [[], [], [], []];
+        setRecordingPct(0);
+        setLiveSignal([]);
+
+        const RECORD_SECONDS = 5;
+        const TARGET_SAMPLES = 256 * RECORD_SECONDS; // 1 280 per channel
+
+        await new Promise((resolve, reject) => {
+          const sub = client.eegReadings.subscribe({
+            next: (reading) => {
+              const ch = reading.electrode;
+              if (ch >= 0 && ch < 4) {
+                const samples = Array.from(reading.samples).filter(isFinite);
+                eegBufferRef.current[ch].push(...samples);
+              }
+
+              // Progress bar driven by the slowest channel
+              const minLen = Math.min(...eegBufferRef.current.map((b) => b.length));
+              setRecordingPct(Math.min(100, (minLen / TARGET_SAMPLES) * 100));
+
+              // Live waveform from AF7 (electrode 1)
+              if (ch === 1) {
+                setLiveSignal((prev) => {
+                  const next = [...prev, ...Array.from(reading.samples)].slice(-60);
+                  return next.map((v, i) => ({ t: i, v }));
+                });
+              }
+
+              if (minLen >= TARGET_SAMPLES) {
+                sub.unsubscribe();
+                resolve();
+              }
+            },
+            error: reject,
+          });
+
+          // Hard timeout — proceed with whatever we have if ≥1 s of data
+          setTimeout(() => {
+            sub.unsubscribe();
+            const minLen = Math.min(...eegBufferRef.current.map((b) => b.length));
+            if (minLen >= 256) resolve();
+            else reject(new Error("Recording timeout — insufficient signal. Check headset fit and electrode contact."));
+          }, 20_000);
+        });
+
+        try { client.disconnect(); } catch {}
+
+        setPhase("analyzing");
+        setStepLabel("Extracting brainwave band powers via FFT…");
+        await sleep(300);
+        setStepLabel("Classifying mental state…");
+
+        // Transpose buffer → [n_samples][n_channels] for the backend
+        const minLen = Math.min(TARGET_SAMPLES, ...eegBufferRef.current.map((b) => b.length));
+        const samples = Array.from({ length: minLen }, (_, i) =>
+          eegBufferRef.current.map((ch) => ch[i] ?? 0)
+        );
+
+        const res = await fetch("/ai-api/eeg/process-raw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ samples, sample_rate: 256 }),
+        });
+        if (!res.ok) throw new Error("AI service unavailable — make sure the Python service is running on port 8000.");
+        const data = await res.json();
+        setEegData(data);
+        setPhase("ready");
+      } catch (err) {
+        const msg =
+          err.name === "NotFoundError"
+            ? "No Muse device selected. Power on your Muse 2/S, make sure Bluetooth is on, then click Connect again."
+            : err.name === "SecurityError"
+            ? "Bluetooth permission denied. Allow Bluetooth access in your browser settings."
+            : err.message || "Failed to connect to EEG device.";
+        setError(msg);
+        try { museClientRef.current?.disconnect(); } catch {}
+        museClientRef.current = null;
+        setPhase("idle");
+      }
+      return;
+    }
+
+    // ── Demo dataset path ──────────────────────────────────────────────────
+    setConnectionMode("demo");
     setPhase("connecting");
     setProgress(0);
-
     await sleep(1200);
     setPhase("analyzing");
 
@@ -561,7 +672,7 @@ export default function Therapy() {
       const data = await res.json();
       setEegData(data);
       setPhase("ready");
-    } catch (e) {
+    } catch {
       setError("Could not reach the AI service. Make sure the Python service is running on port 8000.");
       setPhase("idle");
     }
@@ -573,6 +684,11 @@ export default function Therapy() {
     setProgress(0);
     setError(null);
     setChatMode(false);
+    setLiveSignal([]);
+    setRecordingPct(0);
+    try { museClientRef.current?.disconnect(); } catch {}
+    museClientRef.current = null;
+    eegBufferRef.current = [[], [], [], []];
   };
 
   return (
@@ -659,8 +775,61 @@ export default function Therapy() {
                 </div>
               </div>
               <div>
-                <p className="font-semibold text-gray-800">Establishing connection…</p>
-                <p className="text-sm text-gray-500">Loading EEG dataset</p>
+                <p className="font-semibold text-gray-800">
+                  {connectionMode === "device" ? "Waiting for Bluetooth pairing…" : "Establishing connection…"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {connectionMode === "device"
+                    ? "Select your Muse 2/S in the browser Bluetooth dialog"
+                    : "Loading EEG dataset"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── RECORDING (live Muse device) ── */}
+          {phase === "recording" && (
+            <div className="mt-6 rounded-2xl border border-violet-200 bg-white p-8 text-center space-y-5">
+              <div className="flex items-center justify-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                <p className="font-semibold text-gray-800">Recording live EEG signal…</p>
+              </div>
+              <p className="text-xs text-gray-400">
+                Keep the headset on, stay still, and close your eyes for best results
+              </p>
+
+              {/* Live waveform */}
+              <div className="max-w-md mx-auto bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Live signal · AF7 channel
+                </p>
+                {liveSignal.length > 2 ? (
+                  <ResponsiveContainer width="100%" height={60}>
+                    <LineChart data={liveSignal}>
+                      <Line type="monotone" dataKey="v" stroke="#7c3aed" dot={false} strokeWidth={1.5} />
+                      <XAxis dataKey="t" hide />
+                      <YAxis hide domain={["auto", "auto"]} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[60px] flex items-center justify-center text-xs text-gray-300">
+                    Waiting for signal…
+                  </div>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div className="max-w-sm mx-auto">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>5-second recording</span>
+                  <span>{Math.round(recordingPct)}%</span>
+                </div>
+                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-violet-500 rounded-full transition-all duration-300"
+                    style={{ width: `${recordingPct}%` }}
+                  />
+                </div>
               </div>
             </div>
           )}

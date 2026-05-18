@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 import numpy as np
 import random
+from scipy.signal import welch as scipy_welch
 
 app = FastAPI(title="NeuroTherapy AI Service", version="1.0.0")
 
@@ -577,6 +578,12 @@ class GeneralChatMessage(BaseModel):
     context: Optional[List[HistoryItem]] = []
 
 
+class RawEEGInput(BaseModel):
+    # shape: [n_samples][n_channels] — Muse 2/S sends 4 channels at 256 Hz
+    samples: list[list[float]]
+    sample_rate: int = 256
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -592,6 +599,68 @@ def analyze_features(body: FeaturesInput):
         "confidence": 0.91,
         "label": 0,
         "message": "Legacy endpoint — use /eeg/simulate for full pipeline.",
+    }
+
+
+@app.post("/eeg/process-raw")
+def process_raw_eeg(body: RawEEGInput):
+    """
+    Receive raw EEG samples from a Muse 2/S device (µV, 256 Hz, 4 channels),
+    extract band powers via Welch PSD, classify mental state, and return the
+    same response shape as /eeg/simulate so the frontend works unchanged.
+    """
+    arr = np.nan_to_num(np.array(body.samples, dtype=float))  # [n_samples, n_channels]
+    sr = body.sample_rate
+    n_ch = arr.shape[1]
+    nperseg = min(256, arr.shape[0])
+
+    band_ranges = {
+        "delta": (0.5, 4.0),
+        "theta": (4.0, 8.0),
+        "alpha": (8.0, 13.0),
+        "beta":  (13.0, 30.0),
+        "gamma": (30.0, 45.0),
+    }
+
+    raw_bp: dict[str, float] = {}
+    for band, (lo, hi) in band_ranges.items():
+        ch_powers = []
+        for ch in range(n_ch):
+            freqs, psd = scipy_welch(arr[:, ch], fs=sr, nperseg=nperseg, average="mean")
+            mask = (freqs >= lo) & (freqs < hi)
+            ch_powers.append(float(psd[mask].mean()) if mask.any() else 0.0)
+        raw_bp[band] = float(np.mean(ch_powers))
+
+    # Normalise to display range (≤15 µV²/Hz) while preserving inter-band ratios
+    max_val = max(raw_bp.values()) or 1.0
+    band_powers = {k: round(v * 15.0 / max_val, 3) for k, v in raw_bp.items()}
+
+    state = classify_state(band_powers)
+
+    # Build a signal preview from channel 0 (TP9), centred around 4096 for UI compat
+    raw_ch0 = arr[:60, 0] if arr.shape[0] >= 60 else arr[:, 0]
+    ch_mean = float(raw_ch0.mean())
+    ch_range = float(raw_ch0.max() - raw_ch0.min()) or 1.0
+    signal_data = [
+        {"t": i, "v": round(4096.0 + (float(v) - ch_mean) / ch_range * 200.0, 1)}
+        for i, v in enumerate(raw_ch0)
+    ]
+
+    # Channel labels for Muse 2/S (4-channel)
+    muse_channels = ["TP9", "AF7", "AF8", "TP10"]
+    channels = {muse_channels[i]: round(float(arr[-1, i]), 2) for i in range(n_ch)}
+
+    return {
+        "dataset": "Muse 2 · Live Device",
+        "subject_id": None,
+        "session": 1,
+        "channels": channels,
+        "band_powers": band_powers,
+        "mental_state": state,
+        "original_label": state,
+        "signal_preview": signal_data,
+        "state_info": MENTAL_STATE_INFO[state],
+        "source": "live_device",
     }
 
 
